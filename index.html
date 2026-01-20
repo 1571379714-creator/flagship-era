@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>手机竞争力计算器 (Final Logic)</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --container-bg: #1e1e1e;
+            --card-bg: #2c2c2c;
+            --text-main: #e0e0e0;
+            --text-sub: #a0a0a0;
+            --accent: #bb86fc;
+            --border: #3e3e3e;
+            
+            /* 配件主题色 */
+            --color-screen-bg: #1a237e;
+            --color-screen-border: #5c6bc0;
+            --color-screen-text: #c5cae9;
+            
+            --color-camera-bg: #1b5e20;
+            --color-camera-border: #66bb6a;
+            --color-camera-text: #c8e6c9;
+            
+            --color-body-bg: #f57f17;
+            --color-body-border: #ffee58;
+            --color-body-text: #fff9c4;
+            
+            --color-chip-bg: #4a148c;
+            --color-chip-border: #ab47bc;
+            --color-chip-text: #e1bee7;
+        }
+
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: var(--bg-color); color: var(--text-main); max-width: 1000px; margin: 0 auto; padding: 10px; }
+        
+        .container { background: var(--container-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+        h1 { text-align: center; margin-bottom: 20px; font-weight: 800; color: var(--text-main); letter-spacing: 1px; font-size: 1.5rem; }
+
+        /* 强制不换行的网格布局 */
+        .grid-row-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .grid-row-4 { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+
+        /* 卡片式选择器 */
+        .card-select {
+            position: relative;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            padding: 8px;
+            background: var(--card-bg);
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80px;
+            cursor: pointer;
+            overflow: hidden;
+        }
+        
+        .card-select select {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0;
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .card-label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-sub);
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            z-index: 1;
+            white-space: nowrap;
+        }
+
+        .card-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.1;
+            z-index: 1;
+            text-align: center;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+        
+        .card-sub {
+            font-size: 0.75rem;
+            color: var(--text-sub);
+            margin-top: 2px;
+            z-index: 1;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 100%;
+        }
+
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            .container { padding: 10px; }
+            h1 { font-size: 1.2rem; margin-bottom: 15px; }
+            .card-select { min-height: 70px; padding: 5px; }
+            .card-label { font-size: 0.65rem; margin-bottom: 0; }
+            .card-value { font-size: 1.1rem; }
+            .card-sub { font-size: 0.6rem; margin-top: 0; }
+            .theme-chip .card-value { font-size: 0.9rem; } 
+        }
+
+        /* 主题色覆盖 */
+        .theme-screen { background-color: rgba(26, 35, 126, 0.3); border-color: var(--color-screen-border); }
+        .theme-screen .card-value { color: var(--color-screen-text); }
+        .theme-screen .card-label { color: var(--color-screen-text); opacity: 0.8; }
+        
+        .theme-camera { background-color: rgba(27, 94, 32, 0.3); border-color: var(--color-camera-border); }
+        .theme-camera .card-value { color: var(--color-camera-text); }
+        .theme-camera .card-label { color: var(--color-camera-text); opacity: 0.8; }
+        
+        .theme-body { background-color: rgba(245, 127, 23, 0.2); border-color: var(--color-body-border); }
+        .theme-body .card-value { color: var(--color-body-text); }
+        .theme-body .card-label { color: var(--color-body-text); opacity: 0.8; }
+
+        .theme-chip { background-color: rgba(74, 20, 140, 0.3); border-color: var(--color-chip-border); }
+        .theme-chip .card-value { color: var(--color-chip-text); font-size: 1.2rem; } 
+        .theme-chip .card-label { color: var(--color-chip-text); opacity: 0.8; }
+
+        /* 折叠面板 */
+        details {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        summary {
+            padding: 10px 15px;
+            font-weight: 600;
+            color: var(--text-main);
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+        summary::after { content: '+'; font-size: 1.2em; color: var(--text-sub); }
+        details[open] summary::after { content: '-'; }
+        .tech-content { padding: 10px; display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+        
+        .tech-item {
+            display: flex; align-items: center;
+            background: rgba(255,255,255,0.05); 
+            border: 1px solid var(--border);
+            padding: 8px; border-radius: 6px; font-size: 0.8rem;
+            color: var(--text-main);
+            transition: background 0.2s;
+        }
+        .tech-item:hover { background: rgba(255,255,255,0.1); }
+        .tech-item input { margin-right: 6px; accent-color: var(--accent); }
+
+        /* 结果区域 */
+        .result-area {
+            background: #000000;
+            color: white;
+            border: 1px solid #333;
+            border-radius: 12px;
+            padding: 15px;
+            margin-top: 15px;
+            transition: opacity 0.3s;
+        }
+        .main-score { text-align: center; font-size: 2.5rem; font-weight: 800; color: #ffca28; margin: 5px 0; text-shadow: 0 0 10px rgba(255, 202, 40, 0.3); }
+        .score-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(50px, 1fr)); gap: 8px; text-align: center; margin-top: 12px; }
+        .score-item { background: #1e1e1e; padding: 6px; border-radius: 6px; border: 1px solid #333; }
+        .score-item div:first-child { font-size: 1rem; font-weight: 700; color: #fff; }
+        .score-item div:last-child { font-size: 0.6rem; color: #888; margin-top: 2px; text-transform: uppercase; }
+        
+        .info-row { display: flex; justify-content: space-between; background: rgba(255,255,255,0.08); padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-top: 12px; }
+
+        .error-toast { background: #cf6679; color: black; padding: 10px; border-radius: 6px; margin-top: 10px; display: none; font-size: 0.85rem; text-align: center; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .info-toast { background: #03dac6; color: black; padding: 10px; border-radius: 6px; margin-top: 10px; display: none; font-size: 0.85rem; text-align: center; font-weight: bold; }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📱 手机竞争力计算器</h1>
+
+    <div class="grid-row-3">
+        <div class="card-select">
+            <div class="card-label">年份</div>
+            <div class="card-value" id="displayYear">2018</div>
+            <select id="yearSelect" onchange="updateUI()">
+                <option value="2018">2018</option>
+                <option value="2020">2020</option>
+                <option value="2022">2022</option>
+                <option value="2024">2024</option>
+                <option value="2026">2026</option>
+            </select>
+        </div>
+        <div class="card-select">
+            <div class="card-label">档位</div>
+            <div class="card-value" id="displayTier">T3</div>
+            <div class="card-sub" id="subTier">中端水桶</div>
+            <select id="tierSelect" onchange="updatePriceOptions()">
+                <option value="T1">T1 低端入门</option>
+                <option value="T2">T2 极致性价比</option>
+                <option value="T3">T3 中端水桶</option>
+                <option value="T4">T4 旗舰影像</option>
+                <option value="T5">T5 顶奢折叠</option>
+            </select>
+        </div>
+        <div class="card-select">
+            <div class="card-label">定价</div>
+            <div class="card-value" id="displayPrice">---</div>
+            <select id="priceSelect" onchange="updateDisplay('priceSelect', 'displayPrice'); calculate();"></select>
+        </div>
+    </div>
+
+    <div class="grid-row-4">
+        <div class="card-select theme-chip">
+            <div class="card-label">芯片 (SoC)</div>
+            <div class="card-value" id="displayChip">---</div>
+            <div class="card-sub" id="subChip">价格/性能</div>
+            <select id="chipSelect" onchange="updateDisplay('chipSelect', 'displayChip', 'subChip'); calculate();"></select>
+        </div>
+
+        <div class="card-select theme-screen">
+            <div class="card-label">屏幕</div>
+            <div class="card-value" id="displayScreen">-</div>
+            <div class="card-sub" id="subScreen">配置</div>
+            <select id="screenSelect" onchange="updateDisplay('screenSelect', 'displayScreen', 'subScreen'); calculate();"></select>
+        </div>
+        
+        <div class="card-select theme-camera">
+            <div class="card-label">影像</div>
+            <div class="card-value" id="displayCamera">-</div>
+            <div class="card-sub" id="subCamera">配置</div>
+            <select id="cameraSelect" onchange="updateDisplay('cameraSelect', 'displayCamera', 'subCamera'); calculate();"></select>
+        </div>
+
+        <div class="card-select theme-body">
+            <div class="card-label">外围</div>
+            <div class="card-value" id="displayBody">-</div>
+            <div class="card-sub" id="subBody">配置</div>
+            <select id="bodySelect" onchange="updateDisplay('bodySelect', 'displayBody', 'subBody'); calculate();"></select>
+        </div>
+    </div>
+
+    <details>
+        <summary>研发技术 (不计入硬件成本)</summary>
+        <div class="tech-content" id="techGroup">
+            </div>
+    </details>
+
+    <div id="errorBox" class="error-toast"></div>
+    <div id="infoBox" class="info-toast"></div>
+
+    <div class="result-area" id="resultArea">
+        <div style="font-size:0.75rem; opacity:0.6; text-align:center; text-transform: uppercase; letter-spacing:2px;">Total Score</div>
+        <div class="main-score" id="finalScore">0</div>
+        
+        <div class="info-row">
+            <div>成本: <strong id="totalCost">0</strong></div>
+            <div>利润: <strong id="profit" style="color:#69f0ae">0</strong></div>
+            <div>续航: <strong id="enduranceLeft">0</strong></div>
+        </div>
+
+        <div class="score-grid">
+            <div class="score-item"><div id="scorePerf">0</div><div>性能</div></div>
+            <div class="score-item"><div id="scoreImg">0</div><div>影像</div></div>
+            <div class="score-item"><div id="scoreVis">0</div><div>视觉</div></div>
+            <div class="score-item"><div id="scoreTex">0</div><div>质感</div></div>
+            <div class="score-item"><div id="scoreEnd">0</div><div>续航</div></div>
+            <div class="score-item"><div id="scorePrice">0</div><div>价格</div></div>
+            <div class="score-item"><div id="scoreBonus">0</div><div>加成</div></div>
+        </div>
+    </div>
+</div>
+
+<script>
+// === 数据定义 ===
+const DB = {
+  "levels": ["U", "S+", "S", "A+", "A", "B+", "B", "C+", "C"],
+  "chips": [
+    {"name": "S-660", "perf": 10.0, "load": 10.0, "traits": "中低端", "prices": {"2018": 200, "2020": 100}},
+    {"name": "S-845", "perf": 17.0, "load": 15.0, "traits": "稳定", "prices": {"2018": 600}},
+    {"name": "S-855", "perf": 23.0, "load": 20.0, "traits": "18旗舰；稳定", "prices": {"2018": 800, "2020": 300}},
+    {"name": "S-865", "perf": 28.0, "load": 15.0, "traits": "稳定", "prices": {"2020": 900, "2022": 400}},
+    // 修改: S-888 2020价格1200，负载35
+    {"name": "S-888", "perf": 32.0, "load": 35.0, "traits": "驯龙高手;20旗舰", "prices": {"2020": 1200, "2022": 500}},
+    // 修改: S-8Gen1 负载30
+    {"name": "S-8Gen1", "perf": 36.0, "load": 30.0, "traits": "驯龙高手", "prices": {"2022": 700, "2024": 300}},
+    {"name": "S-8Gen2", "perf": 52.0, "load": 15.0, "traits": "22旗舰；稳定", "prices": {"2022": 1400, "2024": 800}},
+    {"name": "S-8Gen3", "perf": 70.0, "load": 15.0, "traits": "稳定", "prices": {"2024": 1100, "2026": 700}},
+    {"name": "S-8Elite", "perf": 100.0, "load": 25.0, "traits": "24旗舰；性能释放", "prices": {"2024": 1700, "2026": 1200}},
+    // 修改名称: S-8Elite Gen5
+    {"name": "S-8Elite Gen5", "perf": 120.0, "load": 30.0, "traits": "26旗舰；性能释放", "prices": {"2026": 1900}},
+    {"name": "D-700", "perf": 15.0, "load": 5.0, "traits": "中低端", "prices": {"2020": 300, "2022": 200}},
+    {"name": "D-1000+", "perf": 25.0, "load": 30.0, "traits": "驯龙高手", "prices": {"2020": 700, "2022": 300}},
+    {"name": "D-9000", "perf": 38.0, "load": 20.0, "traits": "20旗舰;稳定", "prices": {"2022": 800, "2024": 400}},
+    {"name": "D-8100", "perf": 32.0, "load": 10.0, "traits": "中低端", "prices": {"2022": 600, "2024": 300}},
+    {"name": "D-9200", "perf": 50.0, "load": 25.0, "traits": "稳定", "prices": {"2022": 1200, "2024": 600}},
+    {"name": "D-9300", "perf": 72.0, "load": 35.0, "traits": "驯龙高手", "prices": {"2024": 1000, "2026": 600}},
+    {"name": "D-8400", "perf": 60.0, "load": 15.0, "traits": "中低端", "prices": {"2024": 700, "2026": 400}},
+    {"name": "D-9400", "perf": 90.0, "load": 25.0, "traits": "性能释放", "prices": {"2024": 1500, "2026": 1000}},
+    {"name": "D-9500", "perf": 115.0, "load": 30.0, "traits": "26旗舰；性能释放", "prices": {"2026": 1800}},
+    {"name": "K-710", "perf": 10.0, "load": 5.0, "traits": "中低端", "prices": {"2018": 300, "2020": 200}},
+    {"name": "K-970", "perf": 15.0, "load": 10.0, "traits": "影像", "prices": {"2018": 500}},
+    {"name": "K-980", "perf": 20.0, "load": 20.0, "traits": "影像", "prices": {"2018": 700, "2020": 400}},
+    {"name": "K-990", "perf": 25.0, "load": 15.0, "traits": "影像", "prices": {"2020": 800}},
+    {"name": "K-9000", "perf": 30.0, "load": 25.0, "traits": "20旗舰；绝版", "prices": {"2020": 1300}},
+    {"name": "K-9020", "perf": 55.0, "load": 20.0, "traits": "遥遥领先", "prices": {"2024": 1600, "2026": 1100}},
+    {"name": "K-9030", "perf": 80.0, "load": 20.0, "traits": "26旗舰；遥遥领先", "prices": {"2026": 2000}}
+  ],
+  "screens": [
+    {"level": "U", "name": "双层OLED", "score": 100, "load": 30, "price": 2200},
+    {"level": "S+", "name": "2K 185", "score": 85, "load": 25, "price": 1800},
+    {"level": "S", "name": "1.5K 165", "score": 70, "load": 20, "price": 1700},
+    {"level": "A+", "name": "2K LTPO", "score": 55, "load": 10, "price": 1500},
+    {"level": "A", "name": "2K OLED", "score": 50, "load": 25, "price": 1100},
+    {"level": "B+", "name": "1.5K LCD", "score": 30, "load": 10, "price": 900},
+    {"level": "B", "name": "1K 90", "score": 20, "load": 20, "price": 600},
+    {"level": "C+", "name": "1K OLED", "score": 10, "load": 10, "price": 400},
+    {"level": "C", "name": "720p LCD", "score": 5, "load": 5, "price": 200}
+  ],
+  "cameras": [
+    {"level": "U", "name": "光变长焦", "score": 100, "load": 35, "price": 2200},
+    {"level": "S+", "name": "200MP", "score": 70, "load": 20, "price": 1800},
+    {"level": "S", "name": "潜望长焦", "score": 80, "load": 30, "price": 1700},
+    {"level": "A+", "name": "100MP", "score": 50, "load": 15, "price": 1200},
+    {"level": "A", "name": "OIS防抖", "score": 60, "load": 25, "price": 1100},
+    {"level": "B+", "name": "50MP", "score": 40, "load": 10, "price": 800},
+    {"level": "B", "name": "24MP", "score": 25, "load": 10, "price": 500},
+    {"level": "C+", "name": "12MP", "score": 15, "load": 5, "price": 400},
+    {"level": "C", "name": "5MP", "score": 5, "load": 5, "price": 200}
+  ],
+  "bodies": [
+    {"level": "U", "name": "金属B", "score": 75, "endurance_base": 90, "price": 2200},
+    {"level": "S+", "name": "素皮", "score": 100, "endurance_base": 65, "price": 1900},
+    {"level": "S", "name": "塑料D", "score": 30, "endurance_base": 110, "price": 1700},
+    {"level": "A+", "name": "陶瓷", "score": 80, "endurance_base": 55, "price": 1400},
+    {"level": "A", "name": "金属A", "score": 40, "endurance_base": 80, "price": 1200},
+    {"level": "B+", "name": "玻璃", "score": 60, "endurance_base": 45, "price": 800},
+    {"level": "B", "name": "塑料C", "score": 15, "endurance_base": 70, "price": 600},
+    {"level": "C+", "name": "塑料B", "score": 10, "endurance_base": 60, "price": 400},
+    {"level": "C", "name": "塑料A", "score": 5, "endurance_base": 50, "price": 200}
+  ],
+  "weights": {
+    "性能": { "T1": 2, "T2": 4, "T3": 2, "T4": 1, "T5": 1 },
+    "影像": { "T1": 2, "T2": 1, "T3": 2, "T4": 3, "T5": 2 },
+    "视觉": { "T1": 1, "T2": 2, "T3": 2, "T4": 3, "T5": 2 },
+    "质感": { "T1": 1, "T2": 1, "T3": 2, "T4": 2, "T5": 4 },
+    "续航": { "T1": 4, "T2": 2, "T3": 2, "T4": 1, "T5": 1 }
+  },
+  "price_cards": {
+    "T1": [{"d":999, "v":1000, "s":60}, {"d":1199, "v":1200, "s":40}, {"d":1399, "v":1400, "s":20}, {"d":1599, "v":1600, "s":0}],
+    "T2": [{"d":1799, "v":1800, "s":60}, {"d":1999, "v":2000, "s":40}, {"d":2199, "v":2200, "s":20}, {"d":2399, "v":2400, "s":0}],
+    "T3": [{"d":2599, "v":2600, "s":60}, {"d":2899, "v":2900, "s":40}, {"d":3199, "v":3200, "s":20}, {"d":3499, "v":3500, "s":0}],
+    "T4": [{"d":3999, "v":4000, "s":60}, {"d":4399, "v":4400, "s":40}, {"d":4799, "v":4800, "s":20}, {"d":5199, "v":5200, "s":0}],
+    // T5价格分修正：80, 60, 40, 20, 0
+    "T5": [{"d":5799, "v":5800, "s":80}, {"d":6399, "v":6400, "s":60}, {"d":6999, "v":7000, "s":40}, {"d":7699, "v":7700, "s":20}, {"d":8499, "v":8500, "s":0}]
+  },
+  "technologies": [
+    {"name": "超级像素", "effect": "视觉分+10 续航分-5", "price": 400},
+    {"name": "双电芯", "effect": "质感分+10 续航分-5", "price": 400},
+    {"name": "影像芯片", "effect": "影像分+10 续航分-5", "price": 400},
+    {"name": "保时捷款", "effect": "质感分+20%", "price": 600},
+    {"name": "影像联名", "effect": "影像分+20%", "price": 600},
+    {"name": "背屏", "effect": "视觉分+20%", "price": 600},
+    {"name": "插帧", "effect": "性能分+20%", "price": 600},
+    {"name": "自研系统", "effect": "续航分+15", "price": 600},
+    {"name": "超频", "effect": "性能分+10 续航分-5", "price": 400},
+    {"name": "瀑布屏", "effect": "视觉分+20 性能分-5", "price": 800},
+    {"name": "极致轻薄", "effect": "质感分+20 性能分-5", "price": 800},
+    {"name": "四主摄", "effect": "影像分+20 性能分-5", "price": 800}
+  ],
+  "t4_thresholds": { "2018": 20, "2020": 25, "2022": 35, "2024": 55, "2026": 80 },
+  "t5_allowlist": {
+    "2018": ["S-855", "K-980"],
+    "2020": ["S-888", "D-1000+", "K-9000"],
+    "2022": ["S-8Gen2", "D-9200", "K-9000"],
+    "2024": ["S-8Elite", "D-9400", "K-9020"],
+    "2026": ["S-8Elite Gen5", "D-9500", "K-9030"]
+  },
+  "allowed_levels": {
+    "2018": ["C", "C+", "B", "B+", "A"],
+    "2020": ["C", "C+", "B", "B+", "A", "A+"],
+    "2022": ["C", "C+", "B", "B+", "A", "A+", "S"],
+    "2024": ["C", "C+", "B", "B+", "A", "A+", "S", "S+"],
+    "2026": ["C", "C+", "B", "B+", "A", "A+", "S", "S+", "U"]
+  },
+  "flagship_thresholds": { "2018": "A", "2020": "A+", "2022": "S", "2024": "S+", "2026": "U" }
+};
+
+// === 核心逻辑 ===
+function init() {
+    const techGroup = document.getElementById('techGroup');
+    DB.technologies.forEach((tech, index) => {
+        const div = document.createElement('label');
+        div.className = 'tech-item';
+        div.innerHTML = `<input type="checkbox" id="tech_${index}" value="${index}" onchange="calculate()">
+                         <span>${tech.name} (¥${tech.price})</span>`;
+        techGroup.appendChild(div);
+    });
+    updateUI();
+}
+
+function getLevelIndex(lvl) {
+    return DB.levels.indexOf(lvl);
+}
+
+// 辅助：更新卡片上的显示文本
+function updateDisplay(selectId, displayId, subId=null) {
+    const select = document.getElementById(selectId);
+    if(select.selectedIndex === -1) return;
+    
+    const option = select.options[select.selectedIndex];
+    const displayEl = document.getElementById(displayId);
+    
+    let mainText = "";
+    let subText = "";
+    
+    if (selectId === 'yearSelect') {
+        mainText = select.value;
+    } else if (selectId === 'tierSelect') {
+        const parts = option.text.split(" ");
+        mainText = parts[0]; 
+        subText = parts.length > 1 ? parts[1] : "";
+    } else if (selectId === 'chipSelect') {
+        mainText = option.dataset.name;
+        subText = `¥${option.dataset.price}`;
+    } else if (selectId === 'priceSelect') {
+        mainText = `¥${option.dataset.display}`;
+    } else {
+        // 配件
+        mainText = option.dataset.level; 
+        subText = option.dataset.name.length > 8 ? option.dataset.name.substring(0,8)+"..." : option.dataset.name; 
+    }
+
+    if(displayEl) displayEl.innerText = mainText;
+    if(subId && document.getElementById(subId)) document.getElementById(subId).innerText = subText;
+}
+
+function updateUI() {
+    const year = document.getElementById('yearSelect').value;
+    updateDisplay('yearSelect', 'displayYear');
+    
+    // 更新芯片
+    const chipSelect = document.getElementById('chipSelect');
+    const oldChipVal = chipSelect.value;
+    chipSelect.innerHTML = '';
+    
+    DB.chips.forEach((chip, idx) => {
+        let validPrice = null;
+        const years = Object.keys(chip.prices).sort();
+        for(let y of years) { if(y <= year) validPrice = chip.prices[y]; }
+        
+        if(validPrice !== null) {
+            const opt = document.createElement('option');
+            opt.value = idx;
+            opt.dataset.price = validPrice;
+            opt.dataset.name = chip.name; // 存名字
+            opt.text = `${chip.name} (¥${validPrice})`;
+            chipSelect.appendChild(opt);
+        }
+    });
+    if(oldChipVal && chipSelect.querySelector(`option[value="${oldChipVal}"]`)) {
+        chipSelect.value = oldChipVal;
+    }
+    
+    // 更新配件
+    const validLevels = DB.allowed_levels[year];
+    function updatePartSelect(id, data) {
+        const select = document.getElementById(id);
+        const oldVal = select.value;
+        select.innerHTML = '';
+        data.forEach((item, idx) => {
+            if(validLevels.includes(item.level)) {
+                const opt = document.createElement('option');
+                opt.value = idx;
+                opt.dataset.level = item.level; // 存等级
+                opt.dataset.name = item.name;
+                opt.text = `[${item.level}] ${item.name} (¥${item.price})`;
+                select.appendChild(opt);
+            }
+        });
+        if(oldVal && select.querySelector(`option[value="${oldVal}"]`)) {
+            select.value = oldVal;
+        } else {
+            if(select.options.length > 0) select.selectedIndex = select.options.length - 1;
+        }
+    }
+    
+    updatePartSelect('screenSelect', DB.screens);
+    updatePartSelect('cameraSelect', DB.cameras);
+    updatePartSelect('bodySelect', DB.bodies);
+    
+    // 手动调用一次 tier update 以确保 display 正确，并更新 price options
+    updatePriceOptions(); 
+    
+    // 强制更新所有 Display
+    setTimeout(() => {
+        updateDisplay('chipSelect', 'displayChip', 'subChip');
+        updateDisplay('screenSelect', 'displayScreen', 'subScreen');
+        updateDisplay('cameraSelect', 'displayCamera', 'subCamera');
+        updateDisplay('bodySelect', 'displayBody', 'subBody');
+    }, 0);
+}
+
+function updatePriceOptions() {
+    const tier = document.getElementById('tierSelect').value;
+    const year = parseInt(document.getElementById('yearSelect').value);
+    updateDisplay('tierSelect', 'displayTier', 'subTier');
+    
+    const select = document.getElementById('priceSelect');
+    select.innerHTML = '';
+    
+    let cards = DB.price_cards[tier];
+    
+    // T5 档位特殊逻辑：随年份解锁
+    if (tier === 'T5') {
+        const yearMapping = { 2018: 1, 2020: 2, 2022: 3, 2024: 4, 2026: 5 };
+        const limit = yearMapping[year] || 5;
+        cards = cards.slice(0, limit);
+    }
+    
+    cards.forEach((c, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx; // 这里value对应的是原始数组的相对位置，注意如果slice后需要映射回原值，但这里我们只展示，取值靠索引。
+        // 由于T5 slice了，idx 0 对应原始 0。没问题。
+        opt.dataset.display = c.d;
+        opt.text = `¥${c.d} (分:${c.s})`;
+        select.appendChild(opt);
+    });
+    
+    // 默认选中第一个
+    if(select.options.length > 0) select.selectedIndex = 0;
+    
+    updateDisplay('priceSelect', 'displayPrice');
+    calculate();
+}
+
+function calculate() {
+    const year = document.getElementById('yearSelect').value;
+    const tier = document.getElementById('tierSelect').value;
+    
+    const chipIdx = document.getElementById('chipSelect').value;
+    const screenIdx = document.getElementById('screenSelect').value;
+    const cameraIdx = document.getElementById('cameraSelect').value;
+    const bodyIdx = document.getElementById('bodySelect').value;
+    const priceIdx = document.getElementById('priceSelect').value;
+    
+    if(!chipIdx || !screenIdx || !cameraIdx || !bodyIdx) return; 
+
+    const chip = DB.chips[chipIdx];
+    const chipPrice = parseFloat(document.getElementById('chipSelect').selectedOptions[0].dataset.price);
+    const screen = DB.screens[screenIdx];
+    const camera = DB.cameras[cameraIdx];
+    const body = DB.bodies[bodyIdx];
+    
+    // 获取价格卡，注意T5 slice后的逻辑
+    let cards = DB.price_cards[tier];
+    if (tier === 'T5') {
+        const yearMapping = { 2018: 1, 2020: 2, 2022: 3, 2024: 4, 2026: 5 };
+        const limit = yearMapping[year] || 5;
+        cards = cards.slice(0, limit);
+    }
+    const priceCard = cards[priceIdx];
+
+    const errors = [];
+    const infos = [];
+    
+    // 1. 中低端限制：中低端芯片不能去T3/T4/T5
+    if(chip.traits.includes("中低端") && ["T3", "T4", "T5"].includes(tier)) {
+        errors.push(`❌ 档位限制: [中低端]芯片禁止进入${tier}！`);
+    }
+
+    // 2. ISP瓶颈：性能<30，不能用 B 及以上，除非有[影像]特性
+    // 数组: U, S+, S, A+, A, B+, B, C+, C
+    // Indices: 0, 1, 2, 3, 4, 5, 6 (B)
+    if(chip.perf < 30) {
+        if(chip.traits.includes("影像")) {
+            infos.push("📷 影像特性: 已无视ISP瓶颈");
+        } else {
+            if(getLevelIndex(camera.level) <= 6) {
+                errors.push(`❌ ISP瓶颈: 性能不足(${chip.perf}<30)，无法使用[B级及以上]影像！`);
+            }
+        }
+    }
+
+    // 门槛检查
+    if(tier === 'T4') {
+        const threshold = DB.t4_thresholds[year];
+        if(chip.perf < threshold) {
+            errors.push(`❌ T4 性能不足: ${chip.perf} < ${threshold}`);
+        }
+    }
+    if(tier === 'T5') {
+        const allowedChips = DB.t5_allowlist[year];
+        if(!allowedChips.includes(chip.name)) {
+            errors.push(`❌ T5 芯片不达标`);
+        }
+    }
+
+    let perf = chip.perf;
+    let visual = parseFloat(screen.score);
+    let image = parseFloat(camera.score);
+    let texture = parseFloat(body.score);
+    let enduranceBase = parseFloat(body.endurance_base);
+    let load = chip.load + parseFloat(screen.load) + parseFloat(camera.load);
+    
+    let baseCost = chipPrice + screen.price + camera.price + body.price;
+    
+    // 防止priceCard为空（极端切换情况）
+    let finalPrice = 0;
+    let priceScore = 0;
+    if(priceCard) {
+        finalPrice = priceCard.v;
+        priceScore = priceCard.s;
+    }
+
+    // Tech effects
+    let techCost = 0;
+    const techInputs = document.querySelectorAll('#techGroup input:checked');
+    
+    techInputs.forEach(input => {
+        const tech = DB.technologies[input.value];
+        techCost += tech.price;
+        
+        const effectStr = tech.effect;
+        if(effectStr.includes("性能分+")) {
+             if(effectStr.includes("%")) perf *= (1 + parseFloat(effectStr.match(/性能分\+(\d+)%/)[1])/100);
+             else perf += parseFloat(effectStr.match(/性能分\+(\d+)/)[1]);
+        }
+        if(effectStr.includes("性能分-")) perf -= parseFloat(effectStr.match(/性能分-(\d+)/)[1]);
+        
+        if(effectStr.includes("视觉分+")) {
+            if(effectStr.includes("%")) visual *= (1 + parseFloat(effectStr.match(/视觉分\+(\d+)%/)[1])/100);
+            else visual += parseFloat(effectStr.match(/视觉分\+(\d+)/)[1]);
+        }
+        if(effectStr.includes("影像分+")) {
+            if(effectStr.includes("%")) image *= (1 + parseFloat(effectStr.match(/影像分\+(\d+)%/)[1])/100);
+            else image += parseFloat(effectStr.match(/影像分\+(\d+)/)[1]);
+        }
+        if(effectStr.includes("质感分+")) {
+            if(effectStr.includes("%")) texture *= (1 + parseFloat(effectStr.match(/质感分\+(\d+)%/)[1])/100);
+            else texture += parseFloat(effectStr.match(/质感分\+(\d+)/)[1]);
+        }
+        
+        if(effectStr.includes("续航分+")) enduranceBase += parseFloat(effectStr.match(/续航分\+(\d+)/)[1]);
+        if(effectStr.includes("续航分-")) load += parseFloat(effectStr.match(/续航分-(\d+)/)[1]);
+    });
+
+    let bonus = 0;
+    let enduranceScore = enduranceBase - load;
+    
+    if(enduranceScore < 0) errors.push("❌ 严重: 续航负载爆炸!");
+
+    if(chip.traits.includes("驯龙高手") && enduranceScore >= 30) {
+        bonus += 30;
+        infos.push("驯龙高手 (+30)");
+    }
+    if(chip.traits.includes("影像")) image += 15; 
+    
+    // 旗舰逻辑
+    const flagshipMatch = chip.traits.match(/(\d+)旗舰/);
+    if(flagshipMatch) {
+        const traitYear = "20" + flagshipMatch[1];
+        if(traitYear === year) {
+            const thresholdLvl = DB.flagship_thresholds[year];
+            if(thresholdLvl) {
+                const thresholdIdx = getLevelIndex(thresholdLvl);
+                let stackCount = 0;
+                if(getLevelIndex(screen.level) <= thresholdIdx) stackCount++;
+                if(getLevelIndex(camera.level) <= thresholdIdx) stackCount++;
+                if(getLevelIndex(body.level) <= thresholdIdx) stackCount++;
+                
+                if(stackCount > 0) {
+                    const score = stackCount * 50;
+                    bonus += score;
+                    infos.push(`旗舰堆料 x${stackCount} (+${score})`);
+                }
+            }
+        }
+    }
+    
+    if(chip.traits.includes("遥遥领先") && (tier === 'T4' || tier === 'T5')) {
+        bonus += 50;
+        infos.push("遥遥领先 (+50)");
+    }
+    if(chip.traits.includes("绝版") && (year === '2022' || year === '2024')) {
+        bonus += 30;
+        infos.push("绝版 (+30)");
+    }
+
+    const W = DB.weights;
+    const wPerf = W["性能"][tier];
+    const wImg = W["影像"][tier];
+    const wVis = W["视觉"][tier];
+    const wTex = W["质感"][tier];
+    const wEnd = W["续航"][tier];
+    
+    const scoreTotal = (perf * wPerf) + (image * wImg) + (visual * wVis) + (texture * wTex) + (enduranceScore * wEnd) + priceScore + bonus;
+
+    // 更新结果
+    const resArea = document.getElementById('resultArea');
+    const errBox = document.getElementById('errorBox');
+    const infoBox = document.getElementById('infoBox');
+
+    document.getElementById('finalScore').innerText = errors.length > 0 ? "---" : Math.floor(scoreTotal);
+    document.getElementById('profit').innerText = finalPrice - baseCost; 
+    document.getElementById('totalCost').innerText = baseCost;
+    document.getElementById('enduranceLeft').innerText = enduranceScore.toFixed(0);
+    
+    document.getElementById('scorePerf').innerText = (perf * wPerf).toFixed(0);
+    document.getElementById('scoreImg').innerText = (image * wImg).toFixed(0);
+    document.getElementById('scoreVis').innerText = (visual * wVis).toFixed(0);
+    document.getElementById('scoreTex').innerText = (texture * wTex).toFixed(0);
+    document.getElementById('scoreEnd').innerText = (enduranceScore * wEnd).toFixed(0);
+    document.getElementById('scorePrice').innerText = priceScore;
+    document.getElementById('scoreBonus').innerText = bonus;
+
+    if(errors.length > 0) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = errors.join('<br>');
+        resArea.style.opacity = '0.5';
+        resArea.style.pointerEvents = 'none';
+    } else {
+        errBox.style.display = 'none';
+        resArea.style.opacity = '1';
+        resArea.style.pointerEvents = 'auto';
+    }
+    
+    if(infos.length > 0) {
+        infoBox.style.display = 'block';
+        infoBox.innerHTML = infos.join(' | ');
+    } else {
+        infoBox.style.display = 'none';
+    }
+}
+
+init();
+</script>
+</body>
+</html>
